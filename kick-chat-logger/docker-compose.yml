@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  kick-chat-logger:
+    build: .
+    environment:
+      - KICK_CHANNEL=${KICK_CHANNEL}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    restart: unless-stopped

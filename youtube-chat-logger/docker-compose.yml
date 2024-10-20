@@ -1,0 +1,8 @@
+version: '3'
+services:
+  youtube-logger:
+    build: .
+    environment:
+      - YOUTUBE_CHANNEL=${YOUTUBE_CHANNEL}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    restart: unless-stopped

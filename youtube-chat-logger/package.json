@@ -1,0 +1,15 @@
+{
+  "name": "Youtube-chat-logger",
+  "version": "1.0.0",
+  "description": "Youtube chat logger to Discord",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "puppeteer-extra": "^3.2.0",
+    "puppeteer-extra-plugin-stealth": "^2.8.0",
+    "puppeteer": "^19.0.0"
+  }
+}
