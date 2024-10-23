@@ -61,17 +61,57 @@ const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL || 'YOUR_DISCORD_WEBHO
                 console.log(`New stream detected: ${videoId}`);
                 await page.goto(`https://www.youtube.com/live_chat?v=${videoId}`);
                 oldChatEntryCount = 0; // Reset the count when a new stream starts
+                await switchToLiveChat(page); // Ensure Live Chat is selected
             }
         } catch (err) {
             console.error('Error checking for new stream:', err);
         }
     }, 5 * 60 * 1000); // Check every 5 minutes
 
+    // Check if URL changes every 30 seconds and reset it
+    setInterval(async () => {
+        try {
+            const currentUrl = await page.url();
+            const expectedUrl = `https://www.youtube.com/live_chat?v=${videoId}`;
+            if (currentUrl !== expectedUrl) {
+                console.log(`URL changed! Resetting to: ${expectedUrl}`);
+                await page.goto(expectedUrl);
+                await switchToLiveChat(page); // Ensure Live Chat is selected
+            }
+        } catch (err) {
+            console.error('Error checking/resetting URL:', err);
+        }
+    }, 30 * 1000); // Check every 30 seconds
+
+    // Refresh the page every 12 hours
+    setInterval(async () => {
+        console.log('Refreshing the page...');
+        await page.reload();
+        await switchToLiveChat(page); // Ensure Live Chat is selected
+    }, 12 * 60 * 60 * 1000); // 12 hours
+
+    // Switch to Live Chat on page load
+    const switchToLiveChat = async (page) => {
+        try {
+            await page.waitForSelector('tp-yt-paper-listbox');
+            await page.evaluate(() => {
+                const liveChatButton = [...document.querySelectorAll('tp-yt-paper-item')].find(item =>
+                    item.innerText.includes('Live chat'));
+                if (liveChatButton) liveChatButton.click();
+            });
+            console.log('Switched to Live Chat');
+        } catch (err) {
+            console.error('Error switching to Live Chat:', err);
+        }
+    };
+
+    // Start watching the live chat
     while (true) {
         try {
             if (videoId) {
                 try {
                     await page.goto(`https://www.youtube.com/live_chat?v=${videoId}`);
+                    await switchToLiveChat(page); // Ensure Live Chat is selected on page load
                     await page.waitForSelector('yt-live-chat-text-message-renderer', { timeout: 10000 });
 
                     const chatEntries = await page.$$('yt-live-chat-text-message-renderer'); // Get chat entries

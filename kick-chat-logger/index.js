@@ -14,6 +14,7 @@ if (!kickChannel || !discordWebhookUrl) {
 }
 
 let messageBatch = [];  // Batch of messages to send
+const desiredUrl = `https://kick.com/${kickChannel}/chatroom`;
 
 (async () => {
     // Launch the browser
@@ -30,13 +31,60 @@ let messageBatch = [];  // Batch of messages to send
     });
 
     const page = await browser.newPage();
-    await page.goto(`https://kick.com/${kickChannel}/chatroom`);
+    await page.goto(desiredUrl);
 
     let oldChatEntryCount = 0;
+    let lastUrlCheckTime = Date.now();
+    const urlCheckInterval = 30 * 1000; // 30 seconds
+    const refreshInterval = 12 * 60 * 60 * 1000; // 12 hours
+    let lastRefreshTime = Date.now();
 
-    // Main loop to fetch chat messages
+    // Main loop to fetch chat messages and check for URL change
     while (true) {
         try {
+            const currentTime = Date.now();
+
+            // Check if it's time to check the URL (every 30 seconds)
+            if (currentTime - lastUrlCheckTime >= urlCheckInterval) {
+                lastUrlCheckTime = currentTime;
+
+                // Check if the URL has changed
+                const currentUrl = page.url();
+                if (currentUrl !== desiredUrl) {
+                    console.warn(`URL changed! Navigating back to ${desiredUrl}`);
+                    await page.goto(desiredUrl); // Navigate back to the desired URL
+                    oldChatEntryCount = 0; // Reset chat entry count after navigating back
+                }
+            }
+
+            // Check if it's time to refresh the page (every 12 hours)
+            if (currentTime - lastRefreshTime >= refreshInterval) {
+                lastRefreshTime = currentTime;
+                console.log(`Refreshing the page after 12 hours.`);
+                await page.reload(); // Refresh the page
+                oldChatEntryCount = 0; // Reset chat entry count after refreshing
+
+                // Send a message to Discord that the page was reloaded
+                const reloadMessage = {
+                    username: 'kick',
+                    embeds: [
+                        {
+                            color: 3066993,
+                            description: `The page has been reloaded after 12 hours to ensure proper operation.`,
+                            timestamp: new Date().toISOString()
+                        }
+                    ]
+                };
+
+                axios.post(discordWebhookUrl, reloadMessage)
+                    .then(() => {
+                        console.log('Sent reload notification to Discord.');
+                    })
+                    .catch((error) => {
+                        console.error('Error sending reload notification to Discord:', error);
+                    });
+            }
+
             // Wait for chat entries to appear
             await page.waitForSelector('.chat-entry', { timeout: 10000 });
             const chatEntries = await page.$$('.chat-entry'); // Query all chat entries
